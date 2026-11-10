@@ -155,14 +155,14 @@ Lors du premier lancement, le bot enregistre les données existantes comme réf�
 ## 5\. Structure du projet
 
 PronoteDiscord/
-├── bot.py
-├── pronote\_auth.py
-├── config.py
-├── requirements.txt
-├── .env
-├── README.md
-├── .gitignore
-└── data/
+bot.py
+pronote_auth.py
+config.py
+requirements.txt
+.env
+README.md
+.gitignore
+data/
     ├── session.json
     ├── app\_uuid.txt
     └── last\_check.json
