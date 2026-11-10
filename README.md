@@ -28,7 +28,7 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 Clone le dépôt Git :
 
 
-git clone URL\_DU\_DEPOT
+git clone https://github.com/ptisamy/pronote-discord-bot.git
 cd PronoteDiscord
 
 
