@@ -31,11 +31,6 @@ Clone le dépôt Git :
 
 git clone https://github.com/ptisamy/pronote-discord-bot.git
 
-puis
-
-cd PronoteDiscord
-
-
 Installe ensuite les dépendances :
 
 
