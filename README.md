@@ -105,6 +105,7 @@ Le bot devrait maintenant apparaître dans ton serveur.
 
 
 DISCORD_TOKEN=TON_TOKEN_DISCORD
+
 DISCORD_CHANNEL_ID=123456789012345678
 
 
