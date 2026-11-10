@@ -195,17 +195,5 @@ PronoteDiscord/
 |Le QR code n'est pas reconnu|Vérifie que l'image est nette et lisible.|
 |La session Pronote ne fonctionne plus|Relance `pronote\_auth.py` pour renouveler l'authentification.|
 
-## 
-
-## 7\. Sécurité
-
-Ne publie jamais les fichiers suivants :
-
-* .env
-* data/session.json
-* data/app\_uuid.txt
-
-Ils contiennent des informations sensibles liées à tes comptes
-
 Vérifie que ces fichiers sont bien exclus de Git grâce au fichier .gitignore
 
