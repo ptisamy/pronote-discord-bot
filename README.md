@@ -160,27 +160,27 @@ Lors du premier lancement, le bot enregistre les données existantes comme réf�
 
 PronoteDiscord/
 
-├── bot.py
+    ├── bot.py
 
-├── pronote\_auth.py
+    ├── pronote\_auth.py
 
-├── config.py
+    ├── config.py
 
-├── requirements.txt
+    ├── requirements.txt
 
-├── .env
+    ├── .env
 
-├── README.md
+    ├── README.md
 
-├── .gitignore
+    ├── .gitignore
 
-└── data/
+    └── data/
   
-  ├── session.json
+        ├── session.json
   
-  ├── app\_uuid.txt
+        ├── app\_uuid.txt
   
-  └── last\_check.json
+        └── last\_check.json
 
 
 ## 
