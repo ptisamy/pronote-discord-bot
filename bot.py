@@ -1,4 +1,3 @@
-
 import discord
 import pronotepy
 import asyncio
@@ -28,6 +27,19 @@ CHECK_INTERVAL = 5 * 60
 
 
 # =========================
+# ÉTAT DU BOT
+# =========================
+
+pronote_connected = None
+last_scan_at = None
+
+last_grades_count = 0
+last_homework_count = 0
+
+scan_lock = asyncio.Lock()
+
+
+# =========================
 # STOCKAGE
 # =========================
 
@@ -40,7 +52,7 @@ def load_json(path):
 
 
 def save_json(path, data):
-    path.parent.mkdir(exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     with path.open("w", encoding="utf-8") as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
@@ -74,7 +86,7 @@ def get_client():
     if not client.logged_in:
         raise RuntimeError("Connexion Pronote impossible.")
 
-    # Les tokens Pronote peuvent changer après connexion.
+    # Actualisation des identifiants de session
     save_json(SESSION_FILE, client.export_credentials())
 
     return client
@@ -86,6 +98,7 @@ def fetch_data():
     grades = []
     homework = []
 
+    # Récupération des notes
     for period in client.periods:
         for grade in period.grades:
             item = {
@@ -108,6 +121,7 @@ def fetch_data():
 
             grades.append(item)
 
+    # Récupération des devoirs
     for hw in client.homework(datetime.date.today()):
         item = {
             "id": fingerprint({
@@ -140,6 +154,10 @@ bot = commands.Bot(
     intents=intents
 )
 
+
+# =========================
+# EMBEDS
+# =========================
 
 def make_grade_embed(grade):
     embed = discord.Embed(
@@ -179,7 +197,7 @@ def make_grade_embed(grade):
             inline=False
         )
 
-    embed.set_footer(text="Pronote Discord")
+    embed.set_footer(text="PronoteDiscord")
 
     return embed
 
@@ -203,7 +221,7 @@ def make_homework_embed(hw):
         inline=False
     )
 
-    embed.set_footer(text="Pronote Discord")
+    embed.set_footer(text="PronoteDiscord")
 
     return embed
 
@@ -213,54 +231,246 @@ def make_homework_embed(hw):
 # =========================
 
 async def check_pronote():
-    channel = bot.get_channel(CHANNEL_ID)
+    global pronote_connected, last_scan_at
+    global last_grades_count, last_homework_count
 
-    if channel is None:
-        channel = await bot.fetch_channel(CHANNEL_ID)
+    async with scan_lock:
 
-    data = await asyncio.to_thread(fetch_data)
+        last_scan_at = datetime.datetime.now(
+            datetime.timezone.utc
+        )
 
-    current = {
-        "grades": {x["id"]: x for x in data["grades"]},
-        "homework": {x["id"]: x for x in data["homework"]}
-    }
+        channel = bot.get_channel(CHANNEL_ID)
 
-    previous = load_json(STATE_FILE)
+        if channel is None:
+            channel = await bot.fetch_channel(CHANNEL_ID)
 
-    # Premier démarrage : création de la référence.
-    if previous is None:
+        try:
+            data = await asyncio.to_thread(fetch_data)
+            pronote_connected = True
+
+        except Exception:
+            pronote_connected = False
+            raise
+
+        last_grades_count = len(data["grades"])
+        last_homework_count = len(data["homework"])
+
+        current = {
+            "grades": {
+                x["id"]: x for x in data["grades"]
+            },
+            "homework": {
+                x["id"]: x for x in data["homework"]
+            }
+        }
+
+        previous = load_json(STATE_FILE)
+
+        # =========================
+        # PREMIÈRE SYNCHRONISATION
+        # =========================
+
+        if previous is None:
+
+            await channel.send(
+                "📚 **Première synchronisation Pronote !**\n"
+                "Voici toutes les notes et tous les devoirs récupérés."
+            )
+
+            for grade in data["grades"]:
+                await channel.send(
+                    embed=make_grade_embed(grade)
+                )
+
+            for hw in data["homework"]:
+                await channel.send(
+                    embed=make_homework_embed(hw)
+                )
+
+            save_json(STATE_FILE, current)
+
+            print(
+                f"Première synchronisation terminée : "
+                f"{len(data['grades'])} notes et "
+                f"{len(data['homework'])} devoirs."
+            )
+
+            return
+
+        # =========================
+        # NOUVELLES NOTES
+        # =========================
+
+        old_grades = previous.get("grades", {})
+
+        for grade_id, grade in current["grades"].items():
+
+            if grade_id not in old_grades:
+                await channel.send(
+                    embed=make_grade_embed(grade)
+                )
+
+        # =========================
+        # NOUVEAUX DEVOIRS
+        # =========================
+
+        old_homework = previous.get("homework", {})
+
+        for hw_id, hw in current["homework"].items():
+
+            if hw_id not in old_homework:
+                await channel.send(
+                    embed=make_homework_embed(hw)
+                )
+
+        # Enregistrement de la nouvelle référence
         save_json(STATE_FILE, current)
-        print("Référence initiale enregistrée.")
-        return
 
-    # Détection des nouvelles notes.
-    old_grades = previous.get("grades", {})
+        print(
+            f"[{datetime.datetime.now():%H:%M:%S}] "
+            f"Scan terminé : {last_grades_count} notes, "
+            f"{last_homework_count} devoirs."
+        )
 
-    for grade_id, grade in current["grades"].items():
-        if grade_id not in old_grades:
-            await channel.send(embed=make_grade_embed(grade))
 
-    # Détection des nouveaux devoirs.
-    old_homework = previous.get("homework", {})
+# =========================
+# COMMANDE /STATUS
+# =========================
 
-    for hw_id, hw in current["homework"].items():
-        if hw_id not in old_homework:
-            await channel.send(embed=make_homework_embed(hw))
+@bot.tree.command(
+    name="status",
+    description="Affiche le statut de Pronote Bot."
+)
+async def status(interaction: discord.Interaction):
 
-    save_json(STATE_FILE, current)
+    if pronote_connected is True:
+        connection = "🟢 Connecté"
+        color = discord.Color.green()
 
-    print(
-        f"[{datetime.datetime.now():%H:%M:%S}] "
-        "Vérification terminée."
+    elif pronote_connected is False:
+        connection = "🔴 Déconnecté"
+        color = discord.Color.red()
+
+    else:
+        connection = "🟡 Pas encore testé"
+        color = discord.Color.orange()
+
+    # Dernier scan
+    if last_scan_at:
+        last_scan = (
+            f"<t:{int(last_scan_at.timestamp())}:R>"
+        )
+    else:
+        last_scan = "Aucun scan effectué"
+
+    # Prochain scan automatique
+    next_iteration = pronote_loop.next_iteration
+
+    if next_iteration:
+        now = datetime.datetime.now(
+            datetime.timezone.utc
+        )
+
+        remaining = max(
+            0,
+            int((next_iteration - now).total_seconds())
+        )
+
+        minutes, seconds = divmod(remaining, 60)
+        next_scan = f"{minutes} min {seconds} sec"
+
+    else:
+        next_scan = "En attente"
+
+    embed = discord.Embed(
+        title="📊 Statut de Pronote Bot",
+        color=color
+    )
+
+    embed.add_field(
+        name="Connexion Pronote",
+        value=connection,
+        inline=False
+    )
+
+    embed.add_field(
+        name="Dernier scan",
+        value=last_scan,
+        inline=True
+    )
+
+    embed.add_field(
+        name="Prochain scan",
+        value=next_scan,
+        inline=True
+    )
+
+    embed.add_field(
+        name="Notes récupérées",
+        value=str(last_grades_count),
+        inline=True
+    )
+
+    embed.add_field(
+        name="Devoirs récupérés",
+        value=str(last_homework_count),
+        inline=True
+    )
+
+    embed.set_footer(
+        text="Pronote Bot"
+    )
+
+    await interaction.response.send_message(
+        embed=embed
     )
 
 
-@tasks.loop(seconds=CHECK_INTERVAL)
-async def pronote_loop():
+# =========================
+# COMMANDE /SCAN
+# =========================
+
+@bot.tree.command(
+    name="scan",
+    description="Lance immédiatement un scan Pronote."
+)
+async def scan(interaction: discord.Interaction):
+
+    await interaction.response.defer(
+        ephemeral=True
+    )
+
     try:
         await check_pronote()
+
+        await interaction.followup.send(
+            "✅ Scan terminé ! Les données Pronote ont été vérifiées.",
+            ephemeral=True
+        )
+
     except Exception as error:
-        print(f"Erreur de surveillance : {error}")
+
+        await interaction.followup.send(
+            f"❌ Échec du scan : `{str(error)[:1500]}`",
+            ephemeral=True
+        )
+
+
+# =========================
+# BOUCLE AUTOMATIQUE
+# =========================
+
+@tasks.loop(seconds=CHECK_INTERVAL)
+async def pronote_loop():
+
+    try:
+        await check_pronote()
+
+    except Exception as error:
+        print(
+            f"Erreur de surveillance : {error}"
+        )
 
 
 @pronote_loop.before_loop
@@ -268,19 +478,28 @@ async def before_pronote_loop():
     await bot.wait_until_ready()
 
 
+# =========================
+# DEMARRAGE
+# =========================
+
 @bot.event
 async def on_ready():
+
     print(f"Connecté à Discord : {bot.user}")
+
+    await bot.tree.sync()
+    print("Commandes slash synchronisées.")
 
     if not pronote_loop.is_running():
         pronote_loop.start()
 
 
 # =========================
-# DEMARRAGE
+# LANCEMENT
 # =========================
 
 if __name__ == "__main__":
+
     if not TOKEN or not CHANNEL_ID:
         raise RuntimeError(
             "Configure DISCORD_TOKEN et DISCORD_CHANNEL_ID dans .env"
