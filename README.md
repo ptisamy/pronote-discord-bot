@@ -101,8 +101,8 @@ Le bot devrait maintenant apparaître dans ton serveur.
 À la racine du projet, crée un fichier nommé `.env` contenant :
 
 
-DISCORD\_TOKEN=TON\_TOKEN\_DISCORD
-DISCORD\_CHANNEL\_ID=123456789012345678
+DISCORD_TOKEN=TON_TOKEN_DISCORD
+DISCORD_CHANNEL_ID=123456789012345678
 
 
 
