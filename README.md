@@ -11,7 +11,7 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 * Détection automatique des changements d'emploi du temps
 * Notifications directement sur Discord.
 * Vérification de Pronote toutes les 5 minutes.
-* Possibilité de scanner Pronote manuellement (commande /scan pour les devoirs et les notes, /edtscan pour l'emploi du temps)
+* Possibilité de scanner Pronote manuellement
 * Authentification Pronote par QR code.
 
 ## 
@@ -30,12 +30,12 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 Clone le dépôt GitHub :
 
 
-git clone https://github.com/ptisamy/pronote-discord-bot.git
+`git clone https://github.com/ptisamy/pronote-discord-bot.git`
 
 Installe ensuite les dépendances :
 
 
-py -m pip install -r requirements.txt
+`py -m pip install -r requirements.txt`
 
 
 ## 2\. Création du bot Discord
@@ -101,9 +101,9 @@ Le bot devrait maintenant apparaître dans ton serveur.
 À la racine du projet, crée un fichier nommé `.env` contenant :
 
 
-DISCORD_TOKEN=TON_TOKEN_DISCORD
+`DISCORD_TOKEN=TON_TOKEN_DISCORD`
 
-DISCORD_CHANNEL_ID=L’ID_DU_SALON
+`DISCORD_CHANNEL_ID=L’ID_DU_SALON`
 
 
 
@@ -116,7 +116,7 @@ L'authentification Pronote est séparée du bot Discord.
 Lance le script :
 
 
-py pronote\_auth.py
+`py pronote_auth.py`
 
 
 Le script te demandera :
@@ -134,9 +134,7 @@ Attention : Ce fichier contient des informations permettant de se connecter à t
 
 Une fois l'authentification Pronote terminée, lance :
 
-
-
-py app.py
+`py app.py`
 
 
 Le bot va alors :
@@ -179,6 +177,6 @@ PronoteBot/
 |Le bot n'envoie aucun message|Vérifie l'identifiant du salon et les permissions du bot.|
 |La connexion à Pronote échoue|Vérifie ta connexion Internet et l'accès à Pronote depuis ton réseau.|
 |Le QR code n'est pas reconnu|Vérifie que l'image est nette et lisible.|
-|La session Pronote ne fonctionne plus|Relance `pronote\_auth.py` pour renouveler l'authentification.|
+|La session Pronote ne fonctionne plus|Relance `pronote_auth.py` pour renouveler l'authentification.|
 
 Vérifie que ces fichiers sont bien exclus de Git grâce au fichier .gitignore: 
