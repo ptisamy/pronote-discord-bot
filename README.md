@@ -158,24 +158,15 @@ Lors du premier lancement, le bot peut afficher toutes les notifs de devoirs et 
 PronoteBot/
 
     ├── app.py
-
-    ├── pronote\_auth.py
-
+    ├── pronote\_auth.py
     ├── requirements.txt
-
     ├── .env
-
     ├── README.md
-
     ├── .gitignore
-
     └── data/
-  
-        ├── session.json
-  
-        ├── app\_uuid.txt
-  
-        └── last\_check.json
+         ├── session.json
+         ├── app\_uuid.txt
+         └── last\_check.json
 
 
 ## 
