@@ -1,6 +1,6 @@
-# PronoteDiscord
+# Pronote Bot
 
-Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles notes et les nouveaux devoirs dans un salon Discord.
+Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles notes, les changements d’emploi du temps et les nouveaux devoirs dans un salon Discord.
 
 ## 
 
@@ -8,9 +8,10 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 
 * Détection automatique des nouvelles notes.
 * Détection automatique des nouveaux devoirs.
+* Détection automatique des changements d'emploi du temps
 * Notifications directement sur Discord.
 * Vérification de Pronote toutes les 5 minutes.
-* Possibilité de scanner Pronote manuellement (commande /scan)
+* Possibilité de scanner Pronote manuellement (commande /scan pour les devoirs et les notes, /edtscan pour l'emploi du temps)
 * Authentification Pronote par QR code.
 
 ## 
@@ -26,7 +27,7 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 
 ## 1\. Installation
 
-Clone le dépôt Git :
+Clone le dépôt GitHub :
 
 
 git clone https://github.com/ptisamy/pronote-discord-bot.git
@@ -48,7 +49,7 @@ Pour envoyer les notifications, tu dois d'abord créer un bot Discord.
 1. Va sur le [Discord Developer Portal](https://discord.com/developers/applications).
 2. Connecte-toi avec ton compte Discord.
 3. Clique sur **New Application**.
-4. Donne un nom à ton application (par exemple `PronoteDiscord`).
+4. Donne un nom à ton application (par exemple `Pronote Bot`).
 5. Accepte les conditions et clique sur **Create**.
 
 ### Étape 2 — Créer le bot
@@ -60,7 +61,7 @@ Pour envoyer les notifications, tu dois d'abord créer un bot Discord.
 
 
 
-Attention : Le token est un mot de passe. Ne le partage jamais et ne le publie surtout pas sur GitHub. Si tu le divulgues, régénère-le immédiatement.
+Attention : Le token est un mot de passe. Ne le partage jamais à qui que ce soie.
 
 ### 
 
@@ -102,7 +103,7 @@ Le bot devrait maintenant apparaître dans ton serveur.
 
 DISCORD_TOKEN=TON_TOKEN_DISCORD
 
-DISCORD_CHANNEL_ID=123456789012345678
+DISCORD_CHANNEL_ID=L’ID_DU_SALON
 
 
 
@@ -135,32 +136,30 @@ Une fois l'authentification Pronote terminée, lance :
 
 
 
-py bot.py
+py app.py
 
 
 Le bot va alors :
 
 1. Se connecter à Discord.
 2. Se connecter à Pronote.
-3. Récupérer les notes et les devoirs.
+3. Récupérer les notes, les changements d'emploi du temps et les devoirs.
 4. Comparer les données avec la dernière vérification.
-5. Envoyer une notification si une nouvelle note ou un nouveau devoir est détecté.
+5. Envoyer une notification si une nouvelle note, un nouveau devoir ou un changement d’EdT est détecté.
 
-Les vérifications sont effectuées toutes les 5 minutes.
+Les vérifications de notes et de devoirs sont effectuées toutes les 5 minutes, l’EdT toutes les heures.
 
-Lors du premier lancement, le bot enregistre les données existantes comme référence. Il ne devrait donc pas envoyer de notifications pour les anciennes notes et les anciens devoirs.
+Lors du premier lancement, le bot peut afficher toutes les notifs de devoirs et de notes. C’est parfaitement normal !
 
 ## 
 
 ## 5\. Structure du projet
 
-PronoteDiscord/
+PronoteBot/
 
-    ├── bot.py
+    ├── app.py
 
-    ├── pronote\_auth.py
-
-    ├── config.py
+    ├── pronote\_auth.py
 
     ├── requirements.txt
 
@@ -191,5 +190,4 @@ PronoteDiscord/
 |Le QR code n'est pas reconnu|Vérifie que l'image est nette et lisible.|
 |La session Pronote ne fonctionne plus|Relance `pronote\_auth.py` pour renouveler l'authentification.|
 
-Vérifie que ces fichiers sont bien exclus de Git grâce au fichier .gitignore
-
+Vérifie que ces fichiers sont bien exclus de Git grâce au fichier .gitignore: 
