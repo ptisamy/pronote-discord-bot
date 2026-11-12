@@ -179,6 +179,71 @@ def fetch_timetable():
     return timetable
 
 
+def fetch_next_lesson():
+    client = get_client()
+
+    paris_tz = ZoneInfo("Europe/Paris")
+    now = datetime.datetime.now(paris_tz)
+    today = now.date()
+    end_date = today + datetime.timedelta(days=TIMETABLE_DAYS)
+
+    upcoming = []
+
+    for lesson in client.lessons(today, end_date):
+        start = getattr(lesson, "start", None)
+        end = getattr(lesson, "end", None)
+
+        if start is None:
+            continue
+
+        # Convertit les dates en heure française.
+        if isinstance(start, str):
+            start = datetime.datetime.fromisoformat(start)
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=paris_tz)
+        else:
+            start = start.astimezone(paris_tz)
+
+        if end is not None:
+            if isinstance(end, str):
+                end = datetime.datetime.fromisoformat(end)
+            if end.tzinfo is None:
+                end = end.replace(tzinfo=paris_tz)
+            else:
+                end = end.astimezone(paris_tz)
+
+        # Ignore les cours déjà commencés ou terminés.
+        if start < now:
+            continue
+
+        status = str(getattr(lesson, "status", "") or "").strip()
+        normalized_status = normalize_text(status)
+
+        # Ignore les cours annulés.
+        canceled = bool(getattr(lesson, "canceled", False))
+        if canceled or "annul" in normalized_status:
+            continue
+
+        subject_obj = getattr(lesson, "subject", None)
+        subject = getattr(subject_obj, "name", None) if subject_obj else None
+
+        teacher = getattr(lesson, "teacher_name", None) or "Non précisé"
+        classroom = getattr(lesson, "classroom", None) or "Non précisée"
+
+        upcoming.append({
+            "subject": str(subject or "Cours"),
+            "start": start,
+            "end": end,
+            "teacher": str(teacher),
+            "classroom": str(classroom),
+            "status": status,
+        })
+
+    upcoming.sort(key=lambda lesson: lesson["start"])
+
+    return upcoming[0] if upcoming else None
+
+
 # =========================
 # BOT DISCORD ET EMBEDS
 # =========================
@@ -280,6 +345,42 @@ def make_timetable_embed(lesson, old=None):
     embed.set_footer(text="PronoteDiscord • Surveillance EDT")
     return embed
 
+
+def make_next_lesson_embed(lesson):
+    start = lesson["start"]
+    end = lesson["end"]
+
+    embed = discord.Embed(
+        title="📚 Ton prochain cours",
+        description=f"**{lesson['subject']}**",
+        color=discord.Color.blurple(),
+    )
+
+    if end:
+        horaire = (
+            f"{start.strftime('%d/%m/%Y à %Hh%M')}\n"
+            f"→ {end.strftime('%Hh%M')}"
+        )
+    else:
+        horaire = start.strftime("%d/%m/%Y à %Hh%M")
+
+    embed.add_field(name="🕒 Horaire", value=horaire, inline=False)
+    embed.add_field(name="🚪 Salle", value=lesson["classroom"], inline=True)
+    embed.add_field(name="👨‍🏫 Professeur", value=lesson["teacher"], inline=True)
+
+    remaining = start - datetime.datetime.now(ZoneInfo("Europe/Paris"))
+    minutes = max(0, int(remaining.total_seconds() // 60))
+
+    if minutes < 60:
+        countdown = f"Dans {minutes} minute(s)"
+    else:
+        hours, mins = divmod(minutes, 60)
+        countdown = f"Dans {hours}h{mins:02d}"
+
+    embed.add_field(name="⏳ Début du cours", value=countdown, inline=False)
+    embed.set_footer(text="PronoteDiscord")
+
+    return embed
 
 # =========================
 # SCAN NOTES ET DEVOIRS
@@ -571,6 +672,34 @@ async def scan_edt(interaction: discord.Interaction):
         await interaction.followup.send(
             f"❌ Échec du scan EDT : `{str(error)[:1500]}`",
             ephemeral=True,
+        )
+
+
+@bot.tree.command(
+    name="prochaincours",
+    description="Affiche ton prochain cours non annulé."
+)
+async def prochaincours(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+
+    try:
+        async with pronote_access_lock:
+            lesson = await asyncio.to_thread(fetch_next_lesson)
+
+        if lesson is None:
+            await interaction.followup.send(
+                f"📭 Aucun cours à venir trouvé dans les "
+                f"{TIMETABLE_DAYS} prochains jours."
+            )
+            return
+
+        embed = make_next_lesson_embed(lesson)
+        await interaction.followup.send(embed=embed)
+
+    except Exception as error:
+        await interaction.followup.send(
+            f"❌ Impossible de récupérer le prochain cours : "
+            f"`{type(error).__name__}: {str(error)[:1000]}`"
         )
 
 
