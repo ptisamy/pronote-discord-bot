@@ -14,7 +14,7 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 * Possibilité de scanner Pronote manuellement
 * Authentification Pronote par QR code.
 * Consultation du menu du jour depuis Discord
-
+* Consultation des moyennes, générale et par matière, depuis le bot
 ## 
 
 ## Prérequis
