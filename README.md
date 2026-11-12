@@ -32,7 +32,9 @@ Clone le dépôt GitHub :
 
 `git clone https://github.com/ptisamy/pronote-discord-bot.git`
 
-Installe ensuite les dépendances :
+ou télécharge directement le code depuis la page GitHub du projet
+
+Ouvre un terminal dans le dossier de ton projet et installe ensuite les dépendances :
 
 
 `py -m pip install -r requirements.txt`
@@ -54,14 +56,13 @@ Pour envoyer les notifications, tu dois d'abord créer un bot Discord.
 
 ### Étape 2 — Créer le bot
 
-1. Dans le menu de gauche, ouvre l'onglet **Bot**.
-2. Clique sur **Add Bot** si nécessaire.
-3. Personnalise son nom et son avatar si tu le souhaites.
-4. Dans la section **Token**, récupère ton token Discord.
+1. Dans le menu de gauche, ouvre l'onglet **Bot**.
+2. Personnalise son nom et son avatar si tu le souhaites.
+3. Dans la section **Token**, récupère ton token Discord.
 
 
 
-Attention : Le token est un mot de passe. Ne le partage jamais à qui que ce soie.
+Attention : Le token est le mot de passe de ton bot. Ne le partage jamais à qui que ce soit.
 
 ### 
 
@@ -74,9 +75,9 @@ Attention : Le token est un mot de passe. Ne le partage jamais à qui que ce soi
    * applications.commands
 3. Dans **Bot Permissions**, coche :
 
-   * View Channels
-   * Send Messages
-   * Embed Links
+   * View Channels / Voir les canaux
+   * Send Messages / Envoyer des messages
+   * Embed Links / Intégrer des liens
 4. Copie l'URL générée en bas de page.
 5. Ouvre cette URL dans ton navigateur.
 6. Sélectionne ton serveur Discord et autorise l'ajout du bot.
@@ -164,6 +165,7 @@ PronoteBot/
     └── data/
          ├── session.json
          ├── app_uuid.txt
+         ├── last_timetable.json
          └── last_check.json
 
 
