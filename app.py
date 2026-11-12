@@ -101,6 +101,74 @@ def get_client():
     save_json(SESSION_FILE, client.export_credentials())
     return client
 
+def fetch_menu():
+    client = get_client()
+
+    today = datetime.datetime.now(
+        ZoneInfo("Europe/Paris")
+    ).date()
+
+    menus = client.menus(today, today)
+
+    if not menus:
+        return None
+
+    # On privilégie le menu du midi
+    menu = next(
+        (m for m in menus if m.is_lunch),
+        menus[0]
+    )
+
+    def format_foods(foods):
+        if not foods:
+            return None
+
+        names = [
+            getattr(food, "name", str(food))
+            for food in foods
+        ]
+
+        return "\n".join(f"• {name}" for name in names)
+
+    return {
+        "date": today,
+        "entree": format_foods(menu.first_meal),
+        "plat": format_foods(menu.main_meal),
+        "accompagnement": format_foods(menu.side_meal),
+        "autre": format_foods(menu.other_meal),
+        "fromage": format_foods(menu.cheese),
+        "dessert": format_foods(menu.dessert),
+    }
+
+def make_menu_embed(menu):
+    embed = discord.Embed(
+        title="🍽️ Menu de la cantine",
+        description=menu["date"].strftime("%d/%m/%Y"),
+        color=discord.Color.green()
+    )
+
+    sections = [
+        ("🥗 Entrée", "entree"),
+        ("🍛 Plat", "plat"),
+        ("🥔 Accompagnement", "accompagnement"),
+        ("🍽️ Autre", "autre"),
+        ("🧀 Fromage", "fromage"),
+        ("🍰 Dessert", "dessert"),
+    ]
+
+    for title, key in sections:
+        value = menu[key]
+
+        if value:
+            embed.add_field(
+                name=title,
+                value=value[:1024],
+                inline=False
+            )
+
+    embed.set_footer(text="PronoteDiscord • Source : Pronote")
+
+    return embed
 
 def fetch_data():
     client = get_client()
@@ -529,6 +597,7 @@ async def check_timetable():
 # COMMANDES ET STATUT
 # =========================
 
+
 def format_task_countdown(task):
     next_iteration = task.next_iteration
     if next_iteration is None:
@@ -632,6 +701,32 @@ scan_group = discord.app_commands.Group(
     description="Lance un scan Pronote ciblé.",
 )
 
+
+@bot.tree.command(
+    name="menu",
+    description="Affiche le menu de la cantine du jour."
+)
+async def menu_command(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+
+    try:
+        async with pronote_access_lock:
+            menu = await asyncio.to_thread(fetch_menu)
+
+        if menu is None:
+            await interaction.followup.send(
+                "📭 Aucun menu disponible sur Pronote aujourd'hui."
+            )
+            return
+
+        embed = make_menu_embed(menu)
+        await interaction.followup.send(embed=embed)
+
+    except Exception as error:
+        await interaction.followup.send(
+            f"❌ Impossible de récupérer le menu : "
+            f"`{type(error).__name__}: {str(error)[:1000]}`"
+        )
 
 @scan_group.command(name="devoirs", description="Vérifie immédiatement les devoirs.")
 async def scan_devoirs(interaction: discord.Interaction):
