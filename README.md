@@ -13,6 +13,7 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 * Vérification de Pronote toutes les 5 minutes.
 * Possibilité de scanner Pronote manuellement
 * Authentification Pronote par QR code.
+* Consultation du menu du jour depuis Discord
 
 ## 
 
@@ -179,32 +180,17 @@ PronoteBot/
 |Le bot n'envoie aucun message|Vérifie l'identifiant du salon et les permissions du bot.|
 |La connexion à Pronote échoue|Vérifie ta connexion Internet et l'accès à Pronote depuis ton réseau.|
 |Le QR code n'est pas reconnu|Vérifie que l'image est nette et lisible.|
-|La session Pronote ne fonctionne plus|Relance `pronote_auth.py` pour renouveler l'authentification.|
+|La session Pronote ne fonctionne plus|Relance `pronote_auth.py` pour reconnecter le bot à ton Pronote
 
 
 
 
 
+pro tips: 
+/scan edt
+/scan notes
+/scan devoirs 
+/prochaincours
+/menu
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-:33333
+/status
