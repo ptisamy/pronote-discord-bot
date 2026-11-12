@@ -179,4 +179,30 @@ PronoteBot/
 |Le QR code n'est pas reconnu|Vérifie que l'image est nette et lisible.|
 |La session Pronote ne fonctionne plus|Relance `pronote_auth.py` pour renouveler l'authentification.|
 
-Vérifie que ces fichiers sont bien exclus de Git grâce au fichier .gitignore: 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:33333
