@@ -13,8 +13,9 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 * Vérification de Pronote toutes les 5 minutes.
 * Possibilité de scanner Pronote manuellement
 * Authentification Pronote par QR code.
-* Consultation du menu du jour depuis Discord
-* Consultation des moyennes, générale et par matière, depuis le bot
+* Consultation du menu du jour
+* Consultation des moyennes, générale et par matière.
+* Consultation des devoirs à faire
 ## 
 
 ## Prérequis
@@ -57,7 +58,8 @@ Pour envoyer les notifications, tu dois d'abord créer un bot Discord.
 
 ### Étape 2 — Créer le bot
 
-1. Dans le menu de gauche, ouvre l'onglet **Bot**.
+1. Dans le menu de gauche, ouvre l'onglet **Bot**.
+
 2. Personnalise son nom et son avatar si tu le souhaites.
 3. Dans la section **Token**, récupère ton token Discord.
 
@@ -187,10 +189,19 @@ PronoteBot/
 
 
 pro tips: 
+
 /scan edt
+
 /scan notes
+
 /scan devoirs 
+
 /prochaincours
+
 /menu
+
+/moyenne
+
+/devoirs
 
 /status
