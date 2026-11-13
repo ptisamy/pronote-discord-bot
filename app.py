@@ -174,6 +174,10 @@ def fetch_data():
     client = get_client()
     grades = []
     homework = []
+    periods_data = []
+
+    current_period = getattr(client, "current_period", None)
+    current_period_id = getattr(current_period, "id", None)
 
     for period in client.periods:
         for grade in period.grades:
@@ -196,6 +200,26 @@ def fetch_data():
             }
             grades.append(item)
 
+        subject_averages = []
+        for average in period.averages:
+            subject_obj = getattr(average, "subject", None)
+            subject_name = getattr(subject_obj, "name", None)
+            subject_averages.append({
+                "subject": str(subject_name or "Matière"),
+                "student": getattr(average, "student", None),
+                "out_of": getattr(average, "out_of", None),
+            })
+
+        periods_data.append({
+            "name": period.name,
+            "is_current": (
+                getattr(period, "id", None) == current_period_id
+                if current_period_id is not None else False
+            ),
+            "overall_average": getattr(period, "overall_average", None),
+            "subject_averages": subject_averages,
+        })
+
     for hw in client.homework(datetime.date.today()):
         item = {
             "id": fingerprint({
@@ -210,7 +234,90 @@ def fetch_data():
         }
         homework.append(item)
 
-    return {"grades": grades, "homework": homework}
+    return {
+        "grades": grades,
+        "homework": homework,
+        "periods": periods_data,
+    }
+
+
+def to_number(value):
+    """Convertit une valeur Pronote en nombre."""
+    if value is None:
+        return None
+
+    try:
+        return float(str(value).replace(",", ".").replace("/20", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def get_current_period(data):
+    """Sélectionne la période actuelle, ou la dernière avec une moyenne."""
+    periods = data.get("periods", [])
+
+    for period in periods:
+        if period.get("is_current"):
+            return period
+
+    for period in reversed(periods):
+        if to_number(period.get("overall_average")) is not None:
+            return period
+
+    return periods[-1] if periods else None
+
+
+def find_subject_average(period, subject):
+    """Récupère la moyenne par matière calculée par Pronote."""
+    if not period:
+        return None
+
+    for average in period.get("subject_averages", []):
+        if normalize_text(average.get("subject")) == normalize_text(subject):
+            value = to_number(average.get("student"))
+            out_of = to_number(average.get("out_of"))
+
+            if value is None:
+                return None
+            if out_of is not None and out_of > 0:
+                value = value * 20 / out_of
+
+            return value
+
+    return None
+
+
+async def moyenne_autocomplete(
+    interaction: discord.Interaction,
+    current: str
+):
+    """Propose les matières du dernier scan, sans requête réseau."""
+    previous = load_json(STATE_FILE) or {}
+    grades = previous.get("grades", {})
+
+    subjects = sorted({
+        grade.get("subject")
+        for grade in grades.values()
+        if grade.get("subject")
+    })
+
+    choices = [
+        discord.app_commands.Choice(
+            name="Toutes les matières",
+            value="Toutes"
+        )
+    ]
+
+    for subject in subjects:
+        if normalize_text(current) in normalize_text(subject):
+            choices.append(
+                discord.app_commands.Choice(
+                    name=subject[:100],
+                    value=subject[:100]
+                )
+            )
+
+    return choices[:25]
 
 
 def fetch_timetable():
@@ -794,6 +901,156 @@ async def prochaincours(interaction: discord.Interaction):
     except Exception as error:
         await interaction.followup.send(
             f"❌ Impossible de récupérer le prochain cours : "
+            f"`{type(error).__name__}: {str(error)[:1000]}`"
+        )
+
+
+@bot.tree.command(
+    name="moyenne",
+    description="Affiche la moyenne Pronote générale ou par matière."
+)
+@discord.app_commands.describe(
+    matiere="Choisis une matière ou toutes les matières."
+)
+async def moyenne(
+    interaction: discord.Interaction,
+    matiere: str
+):
+    await interaction.response.defer(thinking=True)
+
+    try:
+        async with pronote_access_lock:
+            data = await asyncio.to_thread(fetch_data)
+
+        period = get_current_period(data)
+        if period is None:
+            await interaction.followup.send(
+                "📭 Pronote ne fournit aucune moyenne pour le moment."
+            )
+            return
+
+        if matiere == "Toutes":
+            average = to_number(period.get("overall_average"))
+            display_name = "Moyenne générale"
+        else:
+            average = find_subject_average(period, matiere)
+            display_name = matiere
+
+        if average is None:
+            await interaction.followup.send(
+                f"📭 Aucune moyenne Pronote disponible pour **{display_name}** "
+                f"dans la période **{period.get('name', 'actuelle')}**."
+            )
+            return
+
+        if average >= 16:
+            color = discord.Color.green()
+        elif average >= 10:
+            color = discord.Color.gold()
+        else:
+            color = discord.Color.red()
+
+        embed = discord.Embed(
+            title="📊 Moyenne Pronote",
+            description=f"**{display_name}**",
+            color=color
+        )
+        embed.add_field(
+            name="Moyenne",
+            value=f"**{average:.2f}/20**",
+            inline=True
+        )
+        embed.add_field(
+            name="Période",
+            value=period.get("name") or "Période actuelle",
+            inline=True
+        )
+        embed.set_footer(
+            text="PronoteDiscord • Moyenne fournie par Pronote"
+        )
+
+        await interaction.followup.send(embed=embed)
+
+    except Exception as error:
+        await interaction.followup.send(
+            f"❌ Impossible de récupérer la moyenne : "
+            f"`{type(error).__name__}: {str(error)[:1000]}`"
+        )
+
+
+moyenne.autocomplete("matiere")(moyenne_autocomplete)
+
+
+@bot.tree.command(
+    name="devoirs",
+    description="Affiche les devoirs à venir pour les 7 prochains jours."
+)
+async def devoirs(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
+
+    try:
+        async with pronote_access_lock:
+            data = await asyncio.to_thread(fetch_data)
+
+        today = datetime.date.today()
+        limit_date = today + datetime.timedelta(days=7)
+        upcoming = []
+
+        for hw in data.get("homework", []):
+            try:
+                due_date = datetime.date.fromisoformat(str(hw.get("date"))[:10])
+            except (TypeError, ValueError):
+                continue
+
+            if today <= due_date <= limit_date:
+                upcoming.append((due_date, hw))
+
+        upcoming.sort(key=lambda item: (item[0], item[1].get("subject", "")))
+
+        if not upcoming:
+            await interaction.followup.send(
+                "🎉 Aucun devoir prévu dans les 7 prochains jours !"
+            )
+            return
+
+        embed = discord.Embed(
+            title="📚 Devoirs à venir",
+            description=(
+                f"Du **{today.strftime('%d/%m')}** "
+                f"au **{limit_date.strftime('%d/%m')}**"
+            ),
+            color=discord.Color.blue()
+        )
+
+        for due_date, hw in upcoming[:15]:
+            is_done = bool(hw.get("done"))
+            status = "✅ Fait" if is_done else "📝 À faire"
+            description = str(hw.get("description") or "Aucune description").strip()
+            if len(description) > 900:
+                description = description[:897] + "..."
+
+            embed.add_field(
+                name=(
+                    f"{'✅' if is_done else '📌'} "
+                    f"{hw.get('subject') or 'Matière inconnue'} "
+                    f"— {due_date.strftime('%d/%m')}"
+                )[:256],
+                value=f"{status}\n{description}",
+                inline=False
+            )
+
+        embed.set_footer(
+            text=(
+                f"15 devoirs affichés sur {len(upcoming)}"
+                if len(upcoming) > 15
+                else f"{len(upcoming)} devoir(s) • Source : Pronote"
+            )
+        )
+        await interaction.followup.send(embed=embed)
+
+    except Exception as error:
+        await interaction.followup.send(
+            f"❌ Impossible de récupérer les devoirs : "
             f"`{type(error).__name__}: {str(error)[:1000]}`"
         )
 
