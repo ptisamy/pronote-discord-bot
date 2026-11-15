@@ -21,8 +21,9 @@ SESSION_FILE = Path("data/session.json")
 STATE_FILE = Path("data/last_check.json")
 TIMETABLE_FILE = Path("data/last_timetable.json")
 
-CHECK_INTERVAL = 5 * 60
-TIMETABLE_INTERVAL = 60 * 60
+# Fréquences réduites pour limiter les accès automatiques à Pronote.
+CHECK_INTERVAL = 30 * 60
+TIMETABLE_INTERVAL = 3 * 60 * 60
 TIMETABLE_DAYS = 14
 
 TIMETABLE_STATUS_KEYWORDS = (
@@ -89,7 +90,16 @@ def timetable_lesson_id(subject, start, end):
 # CONNEXION ET RÉCUPÉRATION PRONOTE
 # =========================
 
+_pronote_client = None
+
+
 def get_client():
+    """Réutilise le client Pronote pendant toute la durée du processus."""
+    global _pronote_client
+
+    if _pronote_client is not None:
+        return _pronote_client
+
     credentials = load_json(SESSION_FILE)
     if not credentials:
         raise RuntimeError("Session absente. Lance pronote_auth.py.")
@@ -98,8 +108,11 @@ def get_client():
     if not client.logged_in:
         raise RuntimeError("Connexion Pronote impossible.")
 
+    # On conserve le client en mémoire : pas de nouvelle authentification
+    # à chaque scan ou commande pendant que le processus reste actif.
     save_json(SESSION_FILE, client.export_credentials())
-    return client
+    _pronote_client = client
+    return _pronote_client
 
 def fetch_menu():
     client = get_client()
@@ -166,7 +179,7 @@ def make_menu_embed(menu):
                 inline=False
             )
 
-    embed.set_footer(text="PronoteDiscord • Source : Pronote")
+    embed.set_footer(text="Pronote Bot")
 
     return embed
 
@@ -439,7 +452,7 @@ def make_grade_embed(grade):
     embed.add_field(name="Période", value=grade["period"], inline=True)
     if grade["comment"]:
         embed.add_field(name="Commentaire", value=str(grade["comment"])[:1024], inline=False)
-    embed.set_footer(text="PronoteDiscord")
+    embed.set_footer(text="Pronote Bot")
     return embed
 
 
@@ -455,7 +468,7 @@ def make_homework_embed(hw):
         value=str(hw["description"])[:1024] or "Aucune description",
         inline=False,
     )
-    embed.set_footer(text="PronoteDiscord")
+    embed.set_footer(text="Pronote Bot")
     return embed
 
 
@@ -517,7 +530,7 @@ def make_timetable_embed(lesson, old=None):
                 inline=False,
             )
 
-    embed.set_footer(text="PronoteDiscord • Surveillance EDT")
+    embed.set_footer(text="Pronote Bot")
     return embed
 
 
@@ -553,7 +566,7 @@ def make_next_lesson_embed(lesson):
         countdown = f"Dans {hours}h{mins:02d}"
 
     embed.add_field(name="⏳ Début du cours", value=countdown, inline=False)
-    embed.set_footer(text="PronoteDiscord")
+    embed.set_footer(text="Pronote Bot")
 
     return embed
 
@@ -798,7 +811,7 @@ async def status(interaction: discord.Interaction):
         inline=False,
     )
 
-    embed.set_footer(text="PronoteDiscord")
+    embed.set_footer(text="Pronote Bot")
     await interaction.followup.send(embed=embed)
 
 
@@ -966,7 +979,7 @@ async def moyenne(
             inline=True
         )
         embed.set_footer(
-            text="PronoteDiscord • Moyenne fournie par Pronote"
+            text="Pronote Bot"
         )
 
         await interaction.followup.send(embed=embed)
