@@ -10,7 +10,6 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 * Détection automatique des nouveaux devoirs.
 * Détection automatique des changements d'emploi du temps
 * Notifications directement sur Discord.
-* Vérification de Pronote toutes les 5 minutes.
 * Possibilité de scanner Pronote manuellement
 * Authentification Pronote par QR code.
 * Consultation du menu du jour
