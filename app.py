@@ -7,11 +7,31 @@ import datetime
 import hashlib
 import unicodedata
 import time
+import logging
 from zoneinfo import ZoneInfo
 
 from pathlib import Path
 from dotenv import load_dotenv
 from discord.ext import commands, tasks
+
+# Configuration des logs Discord
+discord_logger = logging.getLogger("discord")
+discord_logger.setLevel(logging.INFO)
+
+file_handler = logging.FileHandler(
+    filename="discord.log",
+    encoding="utf-8",
+    mode="a"
+)
+
+file_handler.setFormatter(
+    logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+    )
+)
+
+discord_logger.addHandler(file_handler)
+discord_logger.propagate = False
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
