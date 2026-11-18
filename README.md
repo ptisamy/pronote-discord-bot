@@ -148,7 +148,7 @@ Le bot va alors :
 4. Comparer les données avec la dernière vérification.
 5. Envoyer une notification si une nouvelle note, un nouveau devoir ou un changement d’EdT est détecté.
 
-Les vérifications de notes et de devoirs sont effectuées toutes les 5 minutes, l’EdT toutes les heures.
+Les vérifications de notes, de devoirs et d’EdT se font automatiquement après le lancement du bot.
 
 Lors du premier lancement, le bot peut afficher toutes les notifs de devoirs et de notes. C’est parfaitement normal !
 
