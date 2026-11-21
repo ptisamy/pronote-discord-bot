@@ -14,10 +14,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 from discord.ext import commands, tasks
 
-# Configuration des logs Discord
+import logging
+
 discord_logger = logging.getLogger("discord")
 discord_logger.setLevel(logging.INFO)
 
+# Supprime les handlers existants
+discord_logger.handlers.clear()
+
+# Fichier de logs
 file_handler = logging.FileHandler(
     filename="discord.log",
     encoding="utf-8",
@@ -31,6 +36,8 @@ file_handler.setFormatter(
 )
 
 discord_logger.addHandler(file_handler)
+
+# Empêche les logs de remonter jusqu'au logger root
 discord_logger.propagate = False
 
 load_dotenv()
@@ -46,11 +53,18 @@ SCAN_START_HOUR = 7
 SCAN_END_HOUR = 21
 TIMETABLE_DAYS = 14
 
-TIMETABLE_STATUS_KEYWORDS = (
-    "changement de salle",
-    "cours annulé",
-    "exceptionnel",
-)
+TIMETABLE_NORMAL_STATUSES = {
+    "",
+    "cours",
+    "normal",
+    "cours normal",
+    "aucun",
+    "aucun changement",
+}
+
+def is_interesting_timetable_status(status):
+    normalized = normalize_text(status)
+    return normalized not in TIMETABLE_NORMAL_STATUSES
 
 pronote_connected = None
 last_scan_at = None
@@ -102,11 +116,6 @@ def normalize_text(value):
     text = str(value or "").strip().lower()
     text = unicodedata.normalize("NFD", text)
     return "".join(c for c in text if unicodedata.category(c) != "Mn")
-
-
-def is_interesting_timetable_status(status):
-    normalized = normalize_text(status)
-    return any(normalize_text(k) in normalized for k in TIMETABLE_STATUS_KEYWORDS)
 
 
 def timetable_lesson_id(subject, start, end):
@@ -512,29 +521,33 @@ def format_lesson_time(value):
 
 
 def make_timetable_embed(lesson, old=None):
-    status = normalize_text(lesson.get("status", ""))
-    if "annul" in status:
-        title, color = "❌ Cours annulé", discord.Color.red()
-    elif "salle" in status:
-        title, color = "🚪 Changement de salle", discord.Color.orange()
-    else:
-        title, color = "📌 Information exceptionnelle", discord.Color.blurple()
-
     embed = discord.Embed(
-        title=title,
+        title="Notification de cours !",
         description=f"**{lesson['subject']}**",
-        color=color,
+        color=discord.Color.blurple(),
     )
+
     embed.add_field(
         name="Horaire",
         value=f"{format_lesson_time(lesson['start'])}\n→ {format_lesson_time(lesson['end'])}",
         inline=False,
     )
-    embed.add_field(name="Salle", value=lesson["classroom"], inline=True)
-    embed.add_field(name="Professeur", value=lesson["teacher"], inline=True)
+
+    embed.add_field(
+        name="Salle",
+        value=lesson.get("classroom") or "Non précisée",
+        inline=True,
+    )
+
+    embed.add_field(
+        name="Professeur",
+        value=lesson.get("teacher") or "Non précisé",
+        inline=True,
+    )
+
     embed.add_field(
         name="Statut Pronote",
-        value=lesson.get("status") or "Non précisé",
+        value=lesson.get("status") or "Cours normal",
         inline=False,
     )
 
@@ -546,15 +559,20 @@ def make_timetable_embed(lesson, old=None):
             "classroom": "Salle",
             "status": "Statut",
         }
+
         changes = []
+
         for key, label in labels.items():
             if old.get(key) != lesson.get(key):
                 before = old.get(key, "Non précisé")
                 after = lesson.get(key, "Non précisé")
+
                 if key in ("start", "end"):
                     before = format_lesson_time(before)
                     after = format_lesson_time(after)
+
                 changes.append(f"**{label} :** {before} → {after}")
+
         if changes:
             embed.add_field(
                 name="Changements détectés",
@@ -563,6 +581,7 @@ def make_timetable_embed(lesson, old=None):
             )
 
     embed.set_footer(text="Pronote Bot")
+
     return embed
 
 
