@@ -204,3 +204,8 @@ pro tips:
 /devoirs
 
 /status
+
+
+--------
+
+ps: hésitez pas à fork et ajouter des nouvelles features au bot, j'avoue qu'avec le lycée j’ai pas trop trop le temps de rajouter du code...
