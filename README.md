@@ -1,4 +1,4 @@
-# Pronote Bot
+# Spynot
 
 Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles notes, les changements d’emploi du temps et les nouveaux devoirs dans un salon Discord.
 
@@ -31,7 +31,7 @@ Un bot Discord qui surveille Pronote et envoie automatiquement les nouvelles not
 Clone le dépôt GitHub :
 
 
-`git clone https://github.com/ptisamy/pronote-discord-bot.git`
+`git github.com/ptisamy/spynot-discord.git`
 
 ou télécharge directement le code depuis la page GitHub du projet
 
@@ -58,10 +58,8 @@ Pour envoyer les notifications, tu dois d'abord créer un bot Discord.
 ### Étape 2 — Créer le bot
 
 1. Dans le menu de gauche, ouvre l'onglet **Bot**.
-
-2. Personnalise son nom et son avatar si tu le souhaites.
+2. Personnalise son nom et son avatar si tu le souhaites, un avatar stylé sera bientôt disponible dans le repo GitHub.
 3. Dans la section **Token**, récupère ton token Discord.
-
 
 
 Attention : Le token est le mot de passe de ton bot. Ne le partage jamais à qui que ce soit.
@@ -162,8 +160,7 @@ PronoteBot/
     ├── pronote_auth.py
     ├── requirements.txt
     ├── .env
-    ├── README.md
-    ├── .gitignore
+    ├── README.md
     └── data/
          ├── session.json
          ├── app_uuid.txt
